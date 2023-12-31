@@ -1,0 +1,23 @@
+name: "可能的问题"
+description: "我确定会出现这个问题（通过查看源代码），但没有亲自试验过。"
+labels: [不确定, 待处理]
+body:
+- type: checkboxes
+  id: "yml-1"
+  attributes:
+    label: "检查项"
+    description: "请逐个检查下列项目，并勾选确认。"
+    options:
+    - label: "我没有修改任何文件。"
+      required: true
+    - label: "我已确认程序已为最新版，且最新版仍可能有这个问题。"
+      required: true
+    - label: "我已在 [Issues 页面](https://github.com/DZX66/schoolpctool/issues) 中搜索，确认了这一设想未被提交过。"
+      required: true
+- type: textarea
+  id: "yml-2"
+  attributes:
+    label: 描述
+    description: "详细描述具体表现，且为什么会出现这个问题。"
+  validations:
+    required: true
