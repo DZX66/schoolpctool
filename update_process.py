@@ -50,6 +50,8 @@ if __name__=="__main__":
                     log("尝试结束主程序，但未成功。")
                     exit()
         try_remove("D:/tools/schoolpctool.exe")
+        try_remove("D:/spt_config.exe")
+        try_remove("D:/spt_emergency.exe")
         try_remove("D:/tools/config")
         try_remove(join("C:/Users/",getlogin(),"spt_config_backup"))
         try_remove("D:/tools/UPDATEPREPARED")
@@ -57,6 +59,8 @@ if __name__=="__main__":
         log(str(str(r.communicate()[0],"gbk").encode("utf-8"),"utf-8"))
         #复制新文件
         copyfile("D:/tools/update/schoolpctool.exe","D:/tools/schoolpctool.exe")
+        copyfile("D:/tools/update/spt_console.exe","D:/spt_console.exe")
+        copyfile("D:/tools/update/icon.ico","D:/tools/icon.ico")
         #...
         f=open("D:/tools/UPDATEFINISHED","w",encoding="utf-8")
         f.close()
