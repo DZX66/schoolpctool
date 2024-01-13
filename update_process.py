@@ -52,6 +52,7 @@ if __name__=="__main__":
         try_remove("D:/tools/schoolpctool.exe")
         try_remove("D:/spt_config.exe")
         try_remove("D:/spt_emergency.exe")
+        try_remove("D:/spt_console.exe")
         try_remove("D:/tools/config")
         try_remove(join("C:/Users/",getlogin(),"spt_config_backup"))
         try_remove("D:/tools/UPDATEPREPARED")
