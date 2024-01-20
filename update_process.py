@@ -7,6 +7,7 @@ from os.path import exists,join
 from os import remove,getlogin
 import subprocess
 import traceback
+from sys import exit
 def log(log):
     f = open("D:/schoolpctool_update_log.txt","a+",encoding="utf-8")
     f.write("["+datetime.strftime(datetime.now(),'%H:%M:%S')+"]"+log+"\n")

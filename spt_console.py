@@ -10,6 +10,8 @@ from os import remove,system,getlogin
 from os.path import exists,join
 from shutil import copyfile
 import pwinput
+from time import sleep
+from sys import exit
 def is_admin():
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
@@ -20,13 +22,17 @@ if __name__=="__main__":
     if is_admin():
         try:
             cmd=""
-            while cmd not in ("1","2"):
+            while cmd not in ("1","2","3","4","5","6"):
                 system("title schoolpctool控制台")
                 system("cls")
                 print("这是schoolpctool的控制台")
                 print("="*10)
                 print("1.修改配置文件")
                 print("2.启用webblock紧急暂停")
+                print("3.查看特殊标识")
+                print("4.打开帮助页")
+                print("5.重启schoolpctool")
+                print("6.关闭schoolpctool")
                 print("="*10)
                 cmd=input("请选择服务：")
             if cmd=="1":
@@ -61,8 +67,10 @@ if __name__=="__main__":
                 win32api.SetFileAttributes('D:/tools/config', win32con.FILE_ATTRIBUTE_HIDDEN)
                 copyfile('D:/tools/config',join("C:/Users/",getlogin(),"spt_config_backup"))
                 print("修改完毕")
-                if input("是否重启(y/n)?:")=='y':
-                    subprocess.Popen("shutdown /r /t 0", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000)
+                if input("是否重新启动schoolpctool(y/n)?:")=='y':
+                    subprocess.Popen("taskkill /F /IM schoolpctool.exe", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #强制结束
+                    sleep(2) #等一等
+                    subprocess.Popen("start D:/tools/schoolpctool.exe", shell=True, stdout=subprocess.PIPE, creationflags=0x08000000) #启动
             elif cmd=="2":
                 print("这是schoolpctool的webblock的紧急暂停功能。")
                 time="0"
@@ -77,8 +85,33 @@ if __name__=="__main__":
                     print("密码错误")
                     password=pwinput.pwinput("输入密码：")
                 f= open("D:/tools/EMERGENCY","w",encoding="utf-8")
-                f.write(password+"\n"+time)
+                f.write(password+"\n"+time+"\n")
                 f.close()
+            elif cmd=="3":
+                tags=("SPECIAL_A","SPECIAL_B","SPECIAL_C","AUTOSHUTDOWNED","UPDATEPREPARED","UPDATEFINISHED","DEBUG","EMERGENCY")
+                for i in tags:
+                    if exists(join("D:/tools/",i)):
+                        print("存在"+i)
+                system("pause")
+            elif cmd=="4":
+                system("start https://dzx66.github.io/spt_help.html")
+            elif cmd=="5":
+                password=pwinput.pwinput("输入密码：")
+                while password!="":
+                    print("密码错误")
+                    password=pwinput.pwinput("输入密码：")
+                subprocess.Popen("taskkill /F /IM schoolpctool.exe", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #强制结束
+                sleep(2) #等一等
+                subprocess.Popen("start D:/tools/schoolpctool.exe", shell=True, stdout=subprocess.PIPE, creationflags=0x08000000) #启动
+                system("pause")
+                exit()
+            elif cmd=="6":
+                password=pwinput.pwinput("输入密码：")
+                while password!="":
+                    print("密码错误")
+                    password=pwinput.pwinput("输入密码：")
+                subprocess.Popen("taskkill /F /IM schoolpctool.exe", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #强制结束
+                system("pause")
         except Exception as e:
             traceback.print_exc()
             input()
