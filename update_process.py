@@ -60,13 +60,13 @@ if __name__=="__main__":
         r = subprocess.Popen("schtasks /delete /tn schoolpctool_update /F", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #删除更新程序自启
         log(str(str(r.communicate()[0],"gbk").encode("utf-8"),"utf-8"))
         #复制新文件
-        copyfile("D:/tools/update/schoolpctool.exe","D:/tools/schoolpctool.exe")
-        copyfile("D:/tools/update/spt_console.exe","D:/spt_console.exe")
-        copyfile("D:/tools/update/icon.ico","D:/tools/icon.ico")
+        # copyfile("D:/tools/update/schoolpctool.exe","D:/tools/schoolpctool.exe")
+        # copyfile("D:/tools/update/spt_console.exe","D:/spt_console.exe")
+        # copyfile("D:/tools/update/icon.ico","D:/tools/icon.ico")
         #...
-        f=open("D:/tools/UPDATEFINISHED","w",encoding="utf-8")
-        f.close()
-        subprocess.Popen("start D:/tools/schoolpctool.exe", shell=True, stdout=subprocess.PIPE, creationflags=0x08000000) #启动
+        # f=open("D:/tools/UPDATEFINISHED","w",encoding="utf-8")
+        # f.close()
+        # subprocess.Popen("start D:/tools/schoolpctool.exe", shell=True, stdout=subprocess.PIPE, creationflags=0x08000000) #启动
         exit()
     except Exception as e:
         log(traceback.format_exc())
