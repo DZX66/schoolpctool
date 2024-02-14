@@ -19,6 +19,7 @@ import re
 import zipfile
 import base64
 import requests
+from lang import zh_cn,en
 
 def log(log):
     f = open("D:/schoolpctool_log.txt","a+",encoding="utf-8")
@@ -41,15 +42,15 @@ def delete_special_symbols(string:str):
     for i in sp_symbols:
         string=string.replace(i,"")
     return string
-def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_sites,key_words):
+def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_sites,key_words,lang):
     try:
-        log("[wb]启动")
+        log("[wb]"+lang["start"])
 
         r = subprocess.Popen('wmic process where name="schoolpctool.exe" CALL setpriority 256', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #给予spt最高资源分配优先级
         ret=str(str(r.communicate()[0],"gbk").encode("utf-8"),"utf-8")
         ret = ret.replace("\r","")   # 去\r
         ret = re.sub(r'\n$', '', ret)  # 去末尾空行
-        log('[wb]执行wmic process where name="schoolpctool.exe" CALL setpriority 256返回：\n'+ret)
+        log('[wb]'+lang["increase_priority"]+ret)
         while True:
             if broken_sites!=():
                 #检查hosts
@@ -62,7 +63,7 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
                     hosts=f.read()
                     f.close()
                     if hosts!=content:
-                        log("[wb]重新写入hosts...")
+                        log("[wb]"+lang["write_hosts"])
                         mf=open("D:/model","w",encoding="utf-8")
                         mf.write(content)
                         mf.close()
@@ -98,15 +99,15 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
                         ret = ret.replace("\r","")   # 去\r
                         ret = re.sub(r'\n$', '', ret)  # 去末尾空行
                         log("[wb]"+ret)
-                        if "拒绝访问" in ret:
-                            log("[wb]权限不足。")
+                        if lang["access_denied"] in ret:
+                            log("[wb]"+lang["no_access"])
                             exit()
                         sleep(1)
                         remove(res[0])
-                        log("[wb]删除了"+res[0]+" 因为"+window[0]+"("+window[1]+")违反："+i[0]+"("+i[1]+")")
+                        log("[wb]"+lang["delete_log"].format(file_path=res[0],window_title=window[0],window_class=window[1],rule_title=i[0],rule_class=i[1]))
                         if is_notice:
                             with open(join("D:/tools/toast/","wb_"+str(time())),"w",encoding="utf-8") as f:
-                                f.write("toast\n已禁止违规程序\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+"已关闭并删除\nstart https://dzx66.github.io/spt_help.html\n")
+                                f.write("toast\n"+lang["illegal_program"]+"\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+lang["closed_and_deleted"]+"\nstart https://dzx66.github.io/spt_help.html\n")
                         banned=True
                         break
                 if banned:
@@ -118,13 +119,13 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
                         ret = ret.replace("\r","")   # 去\r
                         ret = re.sub(r'\n$', '', ret)  # 去末尾空行
                         log("[wb]"+ret)
-                        if "拒绝访问" in ret:
-                            log("[wb]权限不足。")
+                        if lang["access_denied"] in ret:
+                            log("[wb]"+lang["no_access"])
                             exit()
-                        log("[wb]关闭了"+window[0]+"("+window[1]+") 因为违反："+i[0]+"("+i[1]+")")
+                        log("[wb]"+lang["close_log"].format(window_title=window[0],window_class=window[1],rule_title=i[0],rule_class=i[1]))
                         if is_notice:
                             with open(join("D:/tools/toast/","wb_"+str(time())),"w",encoding="utf-8") as f:
-                                f.write("toast\n已禁止违规窗口\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+"已关闭\nstart https://dzx66.github.io/spt_help.html\n")
+                                f.write("toast\n"+lang["illegal_window"]+"\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+lang["closed"]+"\nstart https://dzx66.github.io/spt_help.html\n")
                         banned=True
                         break
                 if banned:
@@ -140,13 +141,13 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
                         ret = ret.replace("\r","")   # 去\r
                         ret = re.sub(r'\n$', '', ret)  # 去末尾空行
                         log("[wb]"+ret)
-                        if "拒绝访问" in ret:
-                            log("[wb]权限不足。")
+                        if lang["access_denied"] in ret:
+                            log("[wb]"+lang["no_access"])
                             exit()
-                        log("[wb]关闭了"+window[0]+"("+window[1]+") 因为触发关键词："+i)
+                        log("[wb]"+lang["keyword_log"].format(window_title=window[0],window_class=window[1],keyword=i))
                         if is_notice:
                             with open(join("D:/tools/toast/","wb_"+str(time())),"w",encoding="utf-8") as f:
-                                f.write("toast\n已禁止违规窗口\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+"触发关键词“"+i+"”\nstart https://dzx66.github.io/spt_help.html\n")
+                                f.write("toast\n"+lang["illegal_window"]+"\n"+(window[0] if len(window[0])<=10 else window[0][:10]+"...")+lang["trigger_keyword"].format(keyword=i)+"\nstart https://dzx66.github.io/spt_help.html\n")
                         break
             sleep(1)
             if exists("D:/tools/EMERGENCY"):
@@ -160,13 +161,13 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
                     mf.close()
                     copyfile("D:/model","C:\Windows\System32\drivers\etc\hosts")
                     remove("D:/model")
-                    log("[wb]紧急暂停了webblock")
+                    log("[wb]"+lang["suspend"])
                     if is_notice:
                         with open(join("D:/tools/toast/","wb_"+str(time())),"w",encoding="utf-8") as f:
-                            f.write("toast\n紧急暂停\n紧急暂停了webblock功能，持续"+timechange(sleep_time)+"\nstart https://dzx66.github.io/spt_help.html\n")
+                            f.write("toast\n"+lang["suspend_title"]+"\n"+lang["suspend_content"].format(time=timechange(sleep_time))+"\nstart https://dzx66.github.io/spt_help.html\n")
                     sleep(sleep_time)
                 else:
-                    log("[wb]检测到紧急暂停标识文件，但密码不匹配")
+                    log("[wb]"+lang["suspend_wrong_password"])
 
     except Exception as e:
         log("[wb]"+traceback.format_exc())
@@ -185,22 +186,22 @@ def ifProcessRunning(process_name):
         except:
             pass
     return result
-def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is_notice,enable_rslr,enable_ssm):
+def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is_notice,enable_rslr,enable_ssm,lang):
     try:
         #初始化
         rslr_working=enable_rslr
         ssm_working=enable_ssm
         if (not exists(lightframe_path)) and rslr_working:
-            log("[dc-rslr]未找到"+lightframe_path)
+            log("[dc-rslr]"+lang["not_found"].format(obj=lightframe_path))
             rslr_working=False
         if (not exists(screenshots_path)) and ssm_working:
             mkdir(screenshots_path)
-            f=open(join(screenshots_path,"如需将截屏移动到桌面，请将文件重命名，使之不以“截屏文件”开头"),"w",encoding="utf-8")
+            f=open(join(screenshots_path,lang["ssm_tip"]),"w",encoding="utf-8")
             f.close()
         desktop_path=join("C:/Users/",getlogin(),"Desktop")#桌面文件夹目录
         listening=(("LightFrame.ClocksFrame","LightFrame.Clocks"),("LightFrame.CalendarsFrame","LightFrame.Calendars"))#窗口标题，类名
 
-        log("[dc]启动")
+        log("[dc]"+lang["start"])
 
         if rslr_working:
             #等待lightframe开机自启
@@ -209,21 +210,21 @@ def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is
                 sleep(1)
                 waittime+=1
                 if waittime>=wait_start_seconds:
-                    log("[dc-rslr]timeout:已等待"+str(wait_start_seconds)+"秒，时间/日历窗口还未启动。")
+                    log("[dc-rslr]"+lang["lightframe_window_missing"].format(str(wait_start_seconds)))
                     if ifProcessRunning("LightFrame.exe")=="PROCESS_IS_NOT_RUNNING":
-                        log("[dc-rslr]lightframe并未运行，请检查自启动。")
+                        log("[dc-rslr]"+lang["lightframe_is_not_running"])
                         rslr_working=False
                         break
                     else:
-                        log("[dc-rslr]lightframe正在运行，请检查是否设置了时间和日历组件。")
+                        log("[dc-rslr]"+lang["lightframe_is_running"])
                         rslr_working=False
                         break
 
-            log("[dc-rslr]开始监听。")
+            log("[dc-rslr]"+lang["listening_start"])
 
         while True:
             if debug:
-                log("[dc]新循环")
+                log("[dc]"+lang["new_loop"])
             
             #rslr
             if rslr_working:
@@ -233,14 +234,14 @@ def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is
                     hwnd = find_window(listening[0][0], listening[0][1]) #获取句柄
 
                     if hwnd == 0:
-                        log("[dc-rslr]时间窗口未找到！重启窗口...")
+                        log("[dc-rslr]"+lang["time_window_missing"])
                         is_needrestart=True
                     
                     #检测日历窗口
                     hwnd = find_window(listening[1][0], listening[1][1]) #获取句柄
 
                     if hwnd == 0:
-                        log("[dc-rslr]日历窗口未找到！重启窗口...")
+                        log("[dc-rslr]"+lang["calendar_window_missing"])
                         is_needrestart=True
                     if debug:
                         log("[dc-rslr]is_needrestart:"+str(is_needrestart))
@@ -251,21 +252,21 @@ def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is
                         sleep(4)
                         #检测是否成功
                         if debug:
-                            log("[dc-rslr]检测是否成功...")
+                            log("[dc-rslr]"+lang["check_if_success"])
 
                         hwnd = find_window(listening[0][0], listening[0][1]) #获取句柄
 
                         if hwnd == 0:
-                            log("[dc-rslr]时间窗口未重启成功，检查是否设置了时间窗口")
+                            log("[dc-rslr]"+lang["time_window_restart_failed"])
                             rslr_working=False
                         
                         hwnd = find_window(listening[1][0], listening[1][1]) #获取句柄
 
                         if hwnd == 0:
-                            log("[dc-rslr]日历窗口未重启成功，检查是否设置了日历窗口")
+                            log("[dc-rslr]"+lang["calendar_window_restart_failed"])
                             rslr_working=False
                         if debug:
-                            log("[dc-rslr]检测完成")
+                            log("[dc-rslr]"+lang["checking_end"])
                 except Exception as e:
                     log("[dc-rslr]"+traceback.format_exc())
                     rslr_working=False
@@ -283,19 +284,22 @@ def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is
                             except PermissionError:
                                 pass
                             else:
-                                log("[ssm]移动文件："+i)
+                                log("[ssm]"+lang["file_move"].format(file=i))
                                 if is_notice:
                                     moved_files.append(i)
                     if is_notice and moved_files!=[]:
                         sleep(3)
                         with open(join("D:/tools/toast/","ssm_"+str(time())),"w",encoding="utf-8") as f:
-                            f.write("toast\n截屏文件已整理\n"+moved_files[0]+("等"+str(len(moved_files))+"个文件" if len(moved_files)>1 else "")+"已移动到“截图”文件夹\nstart "+screenshots_path+"\n")
+                            if len(moved_files)>1:
+                                f.write("toast\n"+lang["screenshots_sorted"]+"\n"+lang["toast_move_files"].format(file0=moved_files[0],num=str(len(moved_files)))+"\nstart "+screenshots_path+"\n")
+                            else:
+                                f.write("toast\n"+lang["screenshots_sorted"]+"\n"+lang["toast_move_file"].format(file0=moved_files[0])+"\nstart "+screenshots_path+"\n")
                 except Exception as e:
                     log("[dc-ssm]"+traceback.format_exc())
                     ssm_working=False
             sleep(1)
             if not (rslr_working or ssm_working):
-                log("[dc]rslr和ssm都停止了工作，desktop_control子进程结束。")
+                log("[dc]"+lang["process_dc_end"])
                 exit()
         
     except Exception as e:
@@ -324,21 +328,24 @@ def get_all_window():
 
     return window_infos
 
-def timechange(seconds:int,is_tick:bool=False):
-    '''把秒数转化成时段长度表示（x小时x分钟x秒）,若is_tick为真,转化为时刻（x时x分x秒）'''
-    if seconds<60:
-        return str(seconds)+"秒"
-    elif seconds%60==0 and seconds<3600:
-        return str(seconds//60)+("分钟" if not is_tick else "分")
-    elif seconds<3600:
-        return str(seconds//60)+("分钟" if not is_tick else "分")+str(seconds%60)+"秒"
-    elif seconds%60==0:
-        if seconds%3600==0:
-            return str(seconds//3600)+("小时" if not is_tick else "时")
+def timechange(seconds:int,is_tick:bool=False,lang:str="zh-cn"):
+    '''把秒数转化成时段长度表示（x小时x分钟x秒）,若is_tick为真,转化为时刻（x:x:x）'''
+    if lang=="zh-cn":
+        if seconds<60:
+            return str(seconds)+"秒"
+        elif seconds%60==0 and seconds<3600:
+            return str(seconds//60)+("分钟" if not is_tick else "分")
+        elif seconds<3600:
+            return str(seconds//60)+("分钟" if not is_tick else "分")+str(seconds%60)+"秒"
+        elif seconds%60==0:
+            if seconds%3600==0:
+                return str(seconds//3600)+("小时" if not is_tick else "时")
+            else:
+                return str(seconds//3600)+("小时" if not is_tick else "时")+str(seconds%3600//60)+("分钟" if not is_tick else "分")
         else:
-            return str(seconds//3600)+("小时" if not is_tick else "时")+str(seconds%3600//60)+("分钟" if not is_tick else "分")
-    else:
-        return str(seconds//3600)+("小时" if not is_tick else "时")+str(seconds%3600//60)+("分钟" if not is_tick else "分")+str(seconds%60)+"秒"
+            return str(seconds//3600)+("小时" if not is_tick else "时")+str(seconds%3600//60)+("分钟" if not is_tick else "分")+str(seconds%60)+"秒"
+    elif lang=="en":
+        pass
 def lw_log(log):
     #备份
     valid_file="D:/listenwindows_log.txt"
@@ -385,7 +392,7 @@ def lw_log(log):
     f = open(backup2,"a+",encoding="utf-8")
     f.write("["+timenow+"]"+log+"\n")
     f.close()
-def listenwindows(log_max_items):
+def listenwindows(log_max_items,lang):
     try:
         with open("D:/listenwindows_log.txt","a+",encoding="utf-8") as f1:
             f1.seek(0)
@@ -400,10 +407,10 @@ def listenwindows(log_max_items):
                 f.close()
                 copyfile("D:/listenwindows_log.txt",join("C:/Users/",getlogin(),"spt_lwlog_backup1.txt"))
                 copyfile("D:/listenwindows_log.txt","D:/tools/spt_lwlog_backup2.txt")
-                log("[lw]日志溢出"+str(over)+"条，已删除")
+                log("[lw]"+lang["log_overflow"].format(num=str(over)))
         windows=get_all_window()
         lw_log("\n"+datetime.strftime(datetime.now(),'%Y-%m-%d')+"\n")
-        log("[lw]启动")
+        log("[lw]"+lang["start"])
         listening={}#关注的窗口
         sleep(5)
         last_log=("","")
@@ -415,9 +422,9 @@ def listenwindows(log_max_items):
             for i in windows:
                 if i not in new_windows and i in listening:
                     if last_log[0]==i[0] and last_log[1]==i[1]:
-                        lw_log("关闭窗口: 同上"+"["+i[2]+"]"+" 用时 "+timechange(int(time()-listening[i])))
+                        lw_log(lang["close_window"]+ lang["same"]+"["+i[2]+"]"+lang["time_use"]+timechange(int(time()-listening[i])))
                     else:
-                        lw_log("关闭窗口:"+i[0]+"("+i[1]+")"+"["+i[2]+"]"+" 用时 "+timechange(int(time()-listening[i])))
+                        lw_log(lang["close_window"]+i[0]+"("+i[1]+")"+"["+i[2]+"]"+lang["time_use"]+timechange(int(time()-listening[i])))
                     last_log=(i[0],i[1])
                     listening.pop(i)
             windows=new_windows
@@ -425,18 +432,18 @@ def listenwindows(log_max_items):
     except Exception as e:
         log("[lw]"+traceback.format_exc())
 
-def automatic_functions(allowed_before_time,allowed_after_time):
+def automatic_functions(allowed_before_time,allowed_after_time,lang):
     try:
-        log("[ash]启动")
+        log("[ash]"+lang["start"])
         localtimenow=localtime()
         timenow=localtimenow.tm_hour*60+localtimenow.tm_min
         if timenow<allowed_before_time or timenow>allowed_after_time:
-            log("[ash]不正常的时间："+str(timenow)+"<"+str(allowed_before_time)+"或"+str(timenow)+">"+str(allowed_after_time))
+            log("[ash]"+lang["illegal_time"]+lang["colon"]+str(timenow)+"<"+str(allowed_before_time)+lang["or"]+str(timenow)+">"+str(allowed_after_time))
             #创建提示文件
             f=open("D:/tools/AUTOSHUTDOWNED","w",encoding="utf-8")
             f.close()
             with open(join("D:/tools/toast/","ash_"+str(time())),"w",encoding="utf-8") as f:
-                f.write("toast\n不正常的时间\n当前时间在规定开机时间"+timechange(allowed_before_time*60,True)+"之前，或"+timechange(allowed_after_time*60,True)+"之后，将在10秒后自动关机\nstart https://dzx66.github.io/spt_help.html\n")
+                f.write("toast\n"+lang["illegal_time"]+"\n"+lang["toast_illegal_time"].format(allowed_time_start=timechange(allowed_before_time*60,True),allowed_time_end=timechange(allowed_after_time*60,True))+"\nstart https://dzx66.github.io/spt_help.html\n")
             sleep(10)
             subprocess.Popen("shutdown /p", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000)
     except Exception as e:
@@ -463,7 +470,7 @@ def unpack(unzip_dir_path,zip_save_path,password:str=""):
                 else:
                     # 是文件夹，就创建
                     mkdir(new_path)
-def auto_update(version,is_notice):
+def auto_update(version,is_notice,lang):
     '''自动更新'''
     try:
         sleep(5)
@@ -480,19 +487,19 @@ def auto_update(version,is_notice):
             rmdir("D:/tools/update")
             if is_notice:
                 with open(join("D:/tools/toast/","au_"+str(time())),"w",encoding="utf-8") as f:
-                    f.write("toast\n已更新至最新版本\n新版本"+version+"已生效，点击可查看更新日志\nstart https://github.com/DZX66/schoolpctool\n")
+                    f.write("toast\n"+lang["auto_updated"]+"\n"+lang["toast_auto_updated"].format(version=version)+"\nstart https://github.com/DZX66/schoolpctool\n")
         #检查更新
         for i in range(3):
             try:
                 x=requests.get("https://dzx66.github.io/schoolpctoolversion.txt")
                 if x.text.split("\n")[0] != "schoolpctool":
-                    raise Exception("返回的内容不正常")
+                    raise Exception(lang["error_illegal_package"])
             except Exception as e:
                 log("[au]"+traceback.format_exc())
                 if i<2:
-                    log("[au]检查更新时出错，重新尝试..."+str(i+1)+"/3次")
+                    log("[au]"+lang["error_check_update"]+lang["retry"].format(times=str(i+1)))
                 else:
-                    log("[au]检查更新时出错")
+                    log("[au]"+lang["error_check_update"])
                     exit()
                 sleep(3)
             else:
@@ -502,23 +509,23 @@ def auto_update(version,is_notice):
         latest_version = x[1]
         download_url = x[2]
         if latest_version==version:
-            log("[au]版本已是最新！")
+            log("[au]"+lang["latest_version"])
             exit()
         if download_url=="none":
-            log("[au]有最新版本："+latest_version+"，但无下载链接，请稍后重试。")
+            log("[au]"+lang["no_download_url"].format(latest_version))
             exit()
         #下载更新
-        log("[au]有最新版本："+latest_version+"，开始下载更新包......")
-        log("[au]下载地址："+download_url)
+        log("[au]"+lang["start_download"].format(latest_version))
+        log("[au]"+lang["download_url"]+download_url)
         for i in range(3):
             try:
                 file=requests.get(download_url)
             except Exception as e:
                 log("[au]"+traceback.format_exc())
                 if i<2:
-                    log("[au]下载更新包时出错，重新尝试..."+str(i+1)+"/3次")
+                    log("[au]"+lang["error_download"]+lang["retry"].format(times=str(i+1)))
                 else:
-                    log("[au]下载更新包时出错")
+                    log("[au]"+lang["error_download"])
                     exit()
                 sleep(3)
             else:
@@ -526,25 +533,25 @@ def auto_update(version,is_notice):
         f=open("D:/tools/new_version.zip","wb")
         f.write(file.content)
         f.close()
-        log("[au]更新包下载完成，开始解压.......")
+        log("[au]"+lang["unpacking"])
         unpack("D:/tools/update","D:/tools/new_version.zip","")
-        log("[au]解压完成，添加自启动...")
+        log("[au]"+lang["add_self_starting"])
         r = subprocess.Popen("schtasks /create /sc onlogon /tn schoolpctool_update /rl highest /tr D:/tools/update/update_process.exe", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #添加自启动
         log(str(str(r.communicate()[0],"gbk").encode("utf-8"),"utf-8"))
         f=open("D:/tools/UPDATEPREPARED","w",encoding="utf-8")
         f.close()
-        log("[au]更新已准备完成，等待重启...")
+        log("[au]"+lang["prepared"])
     except Exception as e:
         log("[au]"+traceback.format_exc())
 
-def toaster(mark):
+def toaster(mark,lang):
     try:
         if not exists("D:/tools/toast"):
             mkdir("D:/tools/toast")
         toaster=win10toast.ToastNotifier()
         if not exists("D:/tools/icon.ico"):
-            log("[toaster]警告：D:/tools/icon.ico不存在，通知的图标无法正常显示！")
-        log("[toaster]启动")
+            log("[toaster]"+lang["icon_missing"])
+        log("[toaster]"+lang["start"])
         while True:
             queue=[]#消息队列
             valid_files=[]
@@ -553,9 +560,10 @@ def toaster(mark):
                     f=open(join(root, name),"r",encoding="utf-8")
                     content=f.readlines()
                     f.close()
-                    if content[0][:-1]=="toast":
-                        queue.append((content[1][:-1],content[2][:-1],content[3][:-1]))
-                        valid_files.append(join(root, name))
+                    if len(content)>=4:
+                        if content[0][:-1]=="toast":
+                            queue.append((content[1][:-1],content[2][:-1],content[3][:-1]))
+                            valid_files.append(join(root, name))
             for i in valid_files:
                 remove(i)
             if len(queue)>0:
@@ -563,7 +571,7 @@ def toaster(mark):
                 cmd=queue[0][2]
             try:
                 if len(queue)==1:
-                    log("[toaster]发送了通知\n标题："+title+"\n内容："+queue[0][1]+"\n"+mark+"\n命令："+cmd)
+                    log("[toaster]"+lang["call_toast"].format(title=title,content=queue[0][1]+"\n"+mark,command=cmd))
                     toaster.show_toast(title,queue[0][1]+"\n"+mark,duration=5,callback_on_click=lambda:subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, creationflags=0x08000000),icon_path="D:/tools/icon.ico")
                 elif len(queue)>1:
                     is_same_title=True
@@ -578,20 +586,20 @@ def toaster(mark):
                     for i in queue:
                         contents+=i[1]+"\n"
                     if is_same_title and is_same_cmd:
-                        log("[toaster]发送了通知\n标题："+title+"\n内容："+contents+mark+"\n命令："+cmd)
+                        log("[toaster]"+lang["call_toast"].format(title=title,content=contents+mark,command=cmd))
                         toaster.show_toast(title,contents+mark,duration=5,callback_on_click=lambda:subprocess.Popen(i[2], shell=True, stdout=subprocess.PIPE, creationflags=0x08000000),icon_path="D:/tools/icon.ico")
                     elif is_same_title:
-                        log("[toaster]发送了通知\n标题："+title+"\n内容："+contents+mark+"\n命令：None")
+                        log("[toaster]"+lang["call_toast"].format(title=title,content=contents+mark,command="None"))
                         toaster.show_toast(title,contents+mark,duration=5,callback_on_click=None,icon_path="D:/tools/icon.ico")
                     else:
-                        log("[toaster]发送了通知\n标题：schoolpctool通知\n内容："+contents+mark+"\n命令：None")
+                        log("[toaster]"+lang["call_toast"].format(title=lang["toast_title_default"],content=contents+mark,command="None"))
                         toaster.show_toast("schoolpctool通知",contents+mark,duration=5,callback_on_click=None,icon_path="D:/tools/icon.ico")
             except Exception as e:
                 error=traceback.format_exc()
                 log("[toaster]"+error)
-                log("[toaster]发送通知时出错")
-                if "pywintypes.error: (-2147467259, 'Shell_NotifyIcon', '未指定的错误')" in error:
-                    log("[toaster]估计是explorer.exe崩溃导致的错误，此版本无法解决")
+                log("[toaster]"+lang["error_toasting"])
+                if "pywintypes.error: (-2147467259, 'Shell_NotifyIcon'," in error:
+                    log("[toaster]"+lang["explorer_crashing"])
                     exit()
             sleep(5)
     except Exception as e:
@@ -607,7 +615,7 @@ if __name__=="__main__":
     try:
         multiprocessing.freeze_support()
 
-        VERSION="beta0.24"
+        VERSION="beta0.3"
 
         #检测自动更新提示准备完成文件
         if exists("D:/tools/UPDATEPREPARED"):
@@ -627,11 +635,11 @@ if __name__=="__main__":
         CONFIG_A={"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"enable_features":{"restartlightframe":False,"webblock":True,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True}}
         CONFIG_B={"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","交错战线","第五人格","scp","芙宁娜","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"enable_features":{"restartlightframe":False,"webblock":True,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True}}
         CONFIG_C={"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"Ciallo～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$"),("^更改日期和时间$","^Shell_Dialog$"),("^资源监视器$","^WdcWindow$"),("^Everything$","^EVERYTHING$"),("^磁盘管理$","^MMCMainFrame$"),("^.*Edge.*$",".*")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$"),("^哔哩哔哩安装向导$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$"),("^.*智学网.*$",".*"),("^.*微信文件传输助手网页版.*$",".*"),("^.*pdf.*$",".*"),("^.*新标签页.*$",".*"),("^.*无标题.*$",".*"),("^.*zhixue.*$",".*"),("^.*weixin.*$",".*"),("^.*schoolpctool.*$",".*"),("^.*以观书法.*$",".*"),("^.*成绩报告.*$",".*"),("^.*试卷.*$",".*"),("^.*账号.*$",".*")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","千恋万花","柚子社","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","魔女的夜宴","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","","赛马娘","闪耀优俊少女","","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","强制删除","unlocker","uninstall","","新闻","热搜","⚪神","强制关闭","交错战线","adguard","第五人格","microsoftstore","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www..com', '.com', '.cn', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'www..com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com","baijiahao.baidu.com","top.baidu.com"),"enable_features":{"restartlightframe":True,"webblock":True,"screenshotsmove":True,"listenwindows":True,"autoshutdown":True,"autoupdate":True}}
-        CONFIG_DEBUG={"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":(),"enable_features":{"restartlightframe":True,"webblock":True,"screenshotsmove":True,"listenwindows":True,"autoshutdown":False,"autoupdate":False}}
+        CONFIG_DEBUG={"language":"en","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":(),"enable_features":{"restartlightframe":True,"webblock":True,"screenshotsmove":True,"listenwindows":True,"autoshutdown":False,"autoupdate":False}}
         #读取配置文件或备份
         if exists("D:/tools/DEBUG"):
             config=CONFIG_DEBUG
-            log("[父进程]debug开启")
+            log("[parent_process]debug mode.")
         else:
             is_exists1=exists("D:/tools/config")
             if is_exists1:
@@ -649,10 +657,10 @@ if __name__=="__main__":
                     f2.close()
                     remove("D:/spt_temp.json")
                     if not check_config(config):
-                        raise ValueError("配置文件不完整")
+                        raise ValueError("config file is not completed.")
                 except:
-                    log("[父进程]"+traceback.format_exc())
-                    log("[父进程]D:/tools/config读取失败")
+                    log("[parent_process]"+traceback.format_exc())
+                    log("[parent_process]To read D:/tools/config is failed.")
                     is_failed1=True
                 else:
                     copyfile("D:/tools/config",join("C:/Users/",getlogin(),"spt_config_backup"))
@@ -673,20 +681,20 @@ if __name__=="__main__":
                         f2.close()
                         remove("D:/spt_temp.json")
                         if not check_config(config):
-                            raise ValueError("配置文件不完整")
+                            raise ValueError("config file is not completed.")
                     except:
-                        log("[父进程]"+traceback.format_exc())
-                        log("[父进程]备份读取失败")
+                        log("[parent_process]"+traceback.format_exc())
+                        log("[parent_process]To read backup is failed.")
                         is_failed2=True
                     else:
                         copyfile(join("C:/Users/",getlogin(),"spt_config_backup"),"D:/tools/config")
                 if (not is_exists2) or is_failed2:
                     #创建配置文件
-                    if exists("D:/tools/SPECIAL_A"):
+                    if exists("D:/tools/SPE_A"):
                         config=CONFIG_A
-                    elif exists("D:/tools/SPECIAL_B"):
+                    elif exists("D:/tools/SPE_B"):
                         config=CONFIG_B
-                    elif exists("D:/tools/SPECIAL_C"):
+                    elif exists("D:/tools/SPE_C"):
                         config=CONFIG_C
                     elif exists("D:/tools/DEBUG"):
                         config=CONFIG_DEBUG
@@ -698,29 +706,34 @@ if __name__=="__main__":
                     f.close()
                     win32api.SetFileAttributes('D:/tools/config', win32con.FILE_ATTRIBUTE_HIDDEN)
                     copyfile("D:/tools/config",join("C:/Users/",getlogin(),"spt_config_backup"))
+        #设置语言
+        if config["language"]=="zh-cn":
+            lang=zh_cn
+        else:
+            lang=en
         #启动子进程
-        log("[父进程]启动，版本："+VERSION+"，配置：\n"+str(config))
+        log("["+lang["parent_process"]+"]"+lang["parent_begin"].format(version=VERSION)+str(config))
         #rslr=restartlightframe;lw=listenwindows;wb=webblock;ssm=screenshotsmove;ash=autoshutdown;au=autoupdate
         if config['enable_features']['restartlightframe'] or config['enable_features']['screenshotsmove']:
-            dc=multiprocessing.Process(target=desktop_control,args=(False,config['lightframe_path'],config["wait_lightframe_autostart_seconds"],config['screenshots_path'],config["is_notice"],config['enable_features']['restartlightframe'],config['enable_features']['screenshotsmove']))
+            dc=multiprocessing.Process(target=desktop_control,args=(False,config['lightframe_path'],config["wait_lightframe_autostart_seconds"],config['screenshots_path'],config["is_notice"],config['enable_features']['restartlightframe'],config['enable_features']['screenshotsmove'],lang))
             dc.start()
         if config['enable_features']['listenwindows']:
-            lw=multiprocessing.Process(target=listenwindows,args=(config["listenwindows_log_max_items"],))
+            lw=multiprocessing.Process(target=listenwindows,args=(config["listenwindows_log_max_items"],lang))
             lw.start()
         if config['enable_features']['webblock']:
-            wb=multiprocessing.Process(target=webblock,args=(tuple(config['brokenexes']),tuple(config['brokenapps']),tuple(config["white_list"]),config["is_notice"],config["strict_match"],tuple(config["broken_sites"]),tuple(config["key_words"])))
+            wb=multiprocessing.Process(target=webblock,args=(tuple(config['brokenexes']),tuple(config['brokenapps']),tuple(config["white_list"]),config["is_notice"],config["strict_match"],tuple(config["broken_sites"]),tuple(config["key_words"]),lang))
             wb.start()
         if config['enable_features']['autoshutdown']:
-            ash=multiprocessing.Process(target=automatic_functions,args=(config['allowed_time_start'],config['allowed_time_end']))
+            ash=multiprocessing.Process(target=automatic_functions,args=(config['allowed_time_start'],config['allowed_time_end'],lang))
             ash.start()
         if config['enable_features']['autoupdate']:
-            ash=multiprocessing.Process(target=auto_update,args=(VERSION,config["is_notice"]))
+            ash=multiprocessing.Process(target=auto_update,args=(VERSION,config["is_notice"],lang))
             ash.start()
         if config["is_notice"]:
-            toast=multiprocessing.Process(target=toaster,args=(config["mark"],))
+            toast=multiprocessing.Process(target=toaster,args=(config["mark"],lang))
             toast.start()
         while True:
             sleep(3600)
-            log("[父进程]运行正常。")
+            log("["+lang["parent_process"]+"]"+lang["all_is_fine"])
     except Exception as e:
-        log("[父进程]"+traceback.format_exc())
+        log("[parent_process]"+traceback.format_exc())

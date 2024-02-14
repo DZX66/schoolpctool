@@ -21,7 +21,7 @@ if __name__=="__main__":
     if is_admin():
         try:
             #检查版本适配
-            VERSION="beta0.24"
+            VERSION="beta0.3"
             if exists("D:/tools/VERSION"):
                 with open("D:/tools/VERSION","r",encoding="utf-8") as f:
                     spt_version=f.read()
@@ -104,7 +104,7 @@ if __name__=="__main__":
                     f.write(password+"\n"+time+"\n")
                     f.close()
                 elif cmd=="3":
-                    tags=("SPECIAL_A","SPECIAL_B","SPECIAL_C","AUTOSHUTDOWNED","UPDATEPREPARED","UPDATEFINISHED","DEBUG","EMERGENCY")
+                    tags=("SPE_A","SPE_B","SPE_C","AUTOSHUTDOWNED","UPDATEPREPARED","UPDATEFINISHED","DEBUG","EMERGENCY")
                     for i in tags:
                         if exists(join("D:/tools/",i)):
                             print("存在"+i)
