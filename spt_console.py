@@ -21,7 +21,7 @@ if __name__=="__main__":
     if is_admin():
         try:
             #检查版本适配
-            VERSION="beta0.3"
+            VERSION="beta0.31"
             if exists("D:/tools/VERSION"):
                 with open("D:/tools/VERSION","r",encoding="utf-8") as f:
                     spt_version=f.read()
