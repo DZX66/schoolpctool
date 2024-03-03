@@ -68,6 +68,8 @@ zh_cn={
     "hour":"小时",
     "minute":"分钟",
     "second":"秒",
+    "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
+    "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
 }
 en={
     "lang":"en",
@@ -138,6 +140,8 @@ en={
     "hour":" hour(s) ",
     "minute":" minute(s) ",
     "second":" second(s) ",
+    "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
+    "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
 }
 jp = {
 "lang": "jp",
@@ -208,4 +212,6 @@ jp = {
 "hour":"時間",
 "minute":"分",
 "second":"秒",
+    "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
+    "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
 } 
