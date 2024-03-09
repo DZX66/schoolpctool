@@ -14,12 +14,13 @@ import requests
 import traceback
 from datetime import datetime
 from win32com.client import Dispatch
-from time import sleep,time,localtime
+from time import sleep,time,strptime,mktime
 from win32process import GetWindowThreadProcessId
 from os.path import exists,join,isfile
 from os import remove,listdir,getlogin,mkdir,walk,rmdir
 from sys import exit
 from shutil import copyfile
+from typing import List, Dict, Tuple
 import lang as language
 
 
@@ -60,7 +61,7 @@ def ifProcessRunning(process_name:str):
             pass
     return result
 
-def get_all_window():
+def get_all_window() -> Tuple[Tuple[str,str,str]]:
     '''获取当前所有窗口信息 return:((title,class,hwnd:str)*n)'''
     # 获取所有窗口的句柄
     windows = []
@@ -83,7 +84,7 @@ def get_all_window():
 
     return window_infos
 
-def timechange(seconds:int,lang:dict,is_tick:bool=False):
+def timechange(seconds:int,lang: Dict[str,str],is_tick:bool=False):
     '''把秒数转化成时段长度表示（x小时x分钟x秒）,若is_tick为真,转化为时刻（x:x:x）'''
     if is_tick:
             h = seconds//3600
@@ -189,9 +190,23 @@ def check_config(config:dict):
             return False
     return True
 
+def get_beijin_time():
+    '''获取网络时间'''
+    try:
+        url = 'https://www.baidu.com'
+        request_result = requests.get(url=url)
+        if request_result.status_code == 200:
+            headers = request_result.headers
+            net_date = headers.get("date")
+            gmt_time = strptime(net_date[5:25], "%d %b %Y %H:%M:%S")
+            bj_timestamp = int(mktime(gmt_time) + 8 * 60 * 60)
+            return datetime.fromtimestamp(bj_timestamp)
+    except Exception as exc:
+        return None
+    
 # 以下是子进程
 
-def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is_notice,enable_rslr,enable_ssm,lang):
+def desktop_control(debug: bool,lightframe_path: str,wait_start_seconds: int,screenshots_path: str,is_notice:  bool,enable_rslr: bool,enable_ssm,lang: Dict[str,str]):
     '''桌面相关，包含两个子功能：rslr(restartlightframe)和ssm(screenshotsmove)
     rslr确保lightframe不被关闭，ssm将桌面上的截屏文件移动到D盘'''
     try:
@@ -316,7 +331,7 @@ def desktop_control(debug,lightframe_path,wait_start_seconds,screenshots_path,is
     except Exception as e:
         log("[dc]"+traceback.format_exc())
 
-def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_sites,key_words,lang):
+def webblock(brokenexes: Tuple[Tuple[str, str]],brokenapps: Tuple[Tuple[str, str]],white_list: Tuple[Tuple[str, str]],is_notice: bool,is_strict_match: bool,broken_sites: Tuple[str],key_words: Tuple[str],lang: Dict[str,str]):
     '''最大恶魔（什），关闭（有的会删除）违规的窗口'''
     try:
         log("[wb]"+lang["start"])
@@ -452,7 +467,7 @@ def webblock(brokenexes,brokenapps,white_list,is_notice,is_strict_match,broken_s
     except Exception as e:
         log("[wb]"+traceback.format_exc())
 
-def listenwindows(log_max_items,lang):
+def listenwindows(log_max_items: int,lang: Dict[str,str]):
     '''监听并记录打开的窗口'''
     try:
         # 删除多余的记录
@@ -474,7 +489,7 @@ def listenwindows(log_max_items,lang):
         windows = get_all_window()
         lw_log("\n"+datetime.strftime(datetime.now(),'%Y-%m-%d')+"\n")
         log("[lw]"+lang["start"])
-        listening = {}  # 关注的窗口
+        listening: Dict[Tuple[str,str,str],float] = {}  # 关注的窗口
         sleep(5)
         last_log = ("","")
         while True:
@@ -492,28 +507,39 @@ def listenwindows(log_max_items,lang):
                     listening.pop(i)
             windows = new_windows
             sleep(1)
+            # 响应控制台获取当前运行的窗口
+            if exists("D:/tools/GETWINDOWS"):
+                remove("D:/tools/GETWINDOWS")
+                with open("D:/tools/WINDOWS","w",encoding="utf-8") as f:
+                    for i in windows:
+                        if i in listening:
+                            f.write(i[0]+"\t("+i[1]+")\t["+i[2]+"]\t持续时间:"+str(timechange(int(time()-listening[i]),lang))+"\n")
+                        else:
+                            f.write(i[0]+"\t("+i[1]+")\t["+i[2]+"]\t自启动时便存在\n")
+                            
     except Exception as e:
         log("[lw]"+traceback.format_exc())
 
-def automatic_functions(allowed_before_time,allowed_after_time,lang):
+def automatic_functions(allowed_before_time: int,allowed_after_time: int,lang: Dict[str,str]):
     '''开机使做的一次性事情：自动关机(ash)'''
     try:
         log("[ash]"+lang["start"])
-        localtimenow = localtime()
-        timenow = localtimenow.tm_hour*60+localtimenow.tm_min
-        if timenow<allowed_before_time or timenow>allowed_after_time:
-            log("[ash]"+lang["illegal_time"]+lang["colon"]+str(timenow)+"<"+str(allowed_before_time)+lang["or"]+str(timenow)+">"+str(allowed_after_time))
-            #创建提示文件
-            f = open("D:/tools/AUTOSHUTDOWNED","w",encoding="utf-8")
-            f.close()
-            with open(join("D:/tools/toast/","ash_"+str(time())),"w",encoding="utf-8") as f:
-                f.write("toast\n"+lang["illegal_time"]+"\n"+lang["toast_illegal_time"].format(allowed_time_start=timechange(allowed_before_time*60,lang,True),allowed_time_end=timechange(allowed_after_time*60,lang,True))+"\nstart https://dzx66.github.io/spt_help.html\n")
-            sleep(10)
-            subprocess.Popen("shutdown /p", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000)
+        localtimenow = get_beijin_time()
+        if localtimenow:
+            timenow = int(localtimenow.strftime("%H"))*60+int(localtimenow.strftime("%M"))
+            if timenow<allowed_before_time or timenow>allowed_after_time:
+                log("[ash]"+lang["illegal_time"]+lang["colon"]+str(timenow)+"<"+str(allowed_before_time)+lang["or"]+str(timenow)+">"+str(allowed_after_time))
+                #创建提示文件
+                f = open("D:/tools/AUTOSHUTDOWNED","w",encoding="utf-8")
+                f.close()
+                with open(join("D:/tools/toast/","ash_"+str(time())),"w",encoding="utf-8") as f:
+                    f.write("toast\n"+lang["illegal_time"]+"\n"+lang["toast_illegal_time"].format(allowed_time_start=timechange(allowed_before_time*60,lang,True),allowed_time_end=timechange(allowed_after_time*60,lang,True))+"\nstart https://dzx66.github.io/spt_help.html\n")
+                sleep(10)
+                subprocess.Popen("shutdown /p", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000)
     except Exception as e:
         log("[ash]"+traceback.format_exc())
 
-def auto_update(version,is_notice,lang,update_check_url):
+def auto_update(version: str,is_notice: bool,lang: Dict[str,str]):
     '''自动更新'''
     try:
         sleep(5)
@@ -587,7 +613,7 @@ def auto_update(version,is_notice,lang,update_check_url):
     except Exception as e:
         log("[au]"+traceback.format_exc())
 
-def toaster(mark,lang):
+def toaster(mark: str,lang: Dict[str,str]):
     '''通知子进程'''
     try:
         if not exists("D:/tools/toast"):
@@ -649,9 +675,10 @@ def toaster(mark,lang):
     except Exception as e:
         log("[toaster]"+traceback.format_exc())
 
-def backup_docs(target_dir,lang,hard_drive_syms,types):
+def backup_docs(target_dir: str,lang: Dict[str,str],hard_drive_syms: Tuple[str],types: Tuple[str]):
     '''自动备份文档'''
     try:
+        log("[bd]"+lang["start"])
         recent_dir = join("C:/Users/",getlogin(),"AppData/Roaming/Microsoft/Windows/Recent")
         if not exists(recent_dir):
             log("[bd]"+lang["recent_dir_not_found"].format(path=recent_dir))
@@ -700,7 +727,7 @@ if __name__=="__main__":
     try:
         multiprocessing.freeze_support()  # 防止一直开子进程
 
-        VERSION = "beta0.32"
+        VERSION = "beta0.33"
 
         # 检测自动更新提示准备完成文件
         if exists("D:/tools/UPDATEPREPARED"):
@@ -717,11 +744,11 @@ if __name__=="__main__":
         with open("D:/tools/VERSION","w",encoding="utf-8") as f:
             f.write(VERSION)
         
-        CONFIG_DEFAULT = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
-        CONFIG_A = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
-        CONFIG_B = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","交错战线","第五人格","scp","芙宁娜","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
-        CONFIG_C = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"Ciallo～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$"),("^更改日期和时间$","^Shell_Dialog$"),("^资源监视器$","^WdcWindow$"),("^Everything$","^EVERYTHING$"),("^磁盘管理$","^MMCMainFrame$"),("^.*Edge.*$",".*")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$"),("^哔哩哔哩安装向导$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$"),("^.*智学网.*$",".*"),("^.*微信文件传输助手网页版.*$",".*"),("^.*pdf.*$",".*"),("^.*新标签页.*$",".*"),("^.*无标题.*$",".*"),("^.*zhixue.*$",".*"),("^.*weixin.*$",".*"),("^.*schoolpctool.*$",".*"),("^.*以观书法.*$",".*"),("^.*成绩报告.*$",".*"),("^.*试卷.*$",".*"),("^.*账号.*$",".*")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","千恋万花","柚子社","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","魔女的夜宴","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","","赛马娘","闪耀优俊少女","","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","强制删除","unlocker","uninstall","","新闻","热搜","⚪神","强制关闭","交错战线","adguard","第五人格","microsoftstore","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www..com', '.com', '.cn', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'www..com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com","baijiahao.baidu.com","top.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
-        CONFIG_DEBUG = {"language":"jp","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":(),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx"),"hard_drive_syms":("C","D"),"backup_docs_dir":"D:/backup_docs","enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":False,"autoupdate":False,"backup_docs":True}}
+        CONFIG_DEFAULT = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx",".mp4",".mp3",".wav",".gsp",".png",".jpg",".jpeg",".mov",".ogg",".m4a"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
+        CONFIG_A = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx",".mp4",".mp3",".wav",".gsp",".png",".jpg",".jpeg",".mov",".ogg",".m4a"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
+        CONFIG_B = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","交错战线","第五人格","scp","芙宁娜","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx",".mp4",".mp3",".wav",".gsp",".png",".jpg",".jpeg",".mov",".ogg",".m4a"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
+        CONFIG_C = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"Ciallo～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$"),("^更改日期和时间$","^Shell_Dialog$"),("^资源监视器$","^WdcWindow$"),("^Everything$","^EVERYTHING$"),("^磁盘管理$","^MMCMainFrame$"),("^.*Edge.*$",".*")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$"),("^哔哩哔哩安装向导$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$"),("^.*智学网.*$",".*"),("^.*微信文件传输助手网页版.*$",".*"),("^.*pdf.*$",".*"),("^.*新标签页.*$",".*"),("^.*无标题.*$",".*"),("^.*zhixue.*$",".*"),("^.*weixin.*$",".*"),("^.*schoolpctool.*$",".*"),("^.*以观书法.*$",".*"),("^.*成绩报告.*$",".*"),("^.*试卷.*$",".*"),("^.*账号.*$",".*")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","千恋万花","柚子社","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","魔女的夜宴","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","","赛马娘","闪耀优俊少女","","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","强制删除","unlocker","uninstall","","新闻","热搜","⚪神","强制关闭","交错战线","adguard","第五人格","microsoftstore","幻塔","pvz"),"broken_sites":('ys.mihoyo.com', 'mhyy.mihoyo.com', 'autopatchcn.yuanshen.com', 'sr.mihoyo.com', 'www.bh3.com', 'download-porter.mihoyo.com', 'bundle.bh3.com', 'autopatchcn.bhsr.com', 'www.yuanshen.com', 'www.miyoushe.com', 'genshin.hoyoverse.com', 'a.4399.cn', 'webstatic.mihoyo.com', 'bbs.mihoyo.com', 'www..com', '.com', '.cn', 'www.4399.com', 'news.4399.com', 'my.4399.com', 'ssjj.4399.com', 'www..com', 'h.4399.com', 'www.7k7k.com', 'news.7k7k.com',"www.douyin.com","tieba.baidu.com","baijiahao.baidu.com","top.baidu.com"),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx",".mp4",".mp3",".wav",".gsp",".png",".jpg",".jpeg",".mov",".ogg",".m4a"),"backup_docs_dir":"D:/backup_docs","hard_drive_syms":("C","D"),"enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":True,"autoupdate":True,"backup_docs":True}}
+        CONFIG_DEBUG = {"language":"zh-cn","is_notice":True,"screenshots_path":"D:/screenshots","lightframe_path":"D:/lightframe.exe","listenwindows_log_max_items":8000,"wait_lightframe_autostart_seconds":120,"allowed_time_start":390,"allowed_time_end":1290,"strict_match":False,"mark":"～(∠·ω< )⌒★","brokenapps":(("^云·原神$","^Qt5152QWindowIcon$"),("^原神$","^Qt5QWindowIcon$"),("^原神$","^UnityWndClass$"),("^崩坏：星穹铁道$","^Qt5QWindowIcon$"),("^崩坏：星穹铁道$","^UnityWndClass$"),("^任务管理器$","^TaskManagerWindow$"),("^任务计划程序$","^MMCMainFrame$"),("^注册表编辑器$","^RegEdit_RegEdit$"),("^本地组策略编辑器$","^MMCMainFrame$")),"brokenexes":(("^云·原神 安装程序$","^Qt5156QWindowIcon$"),("^崩坏：星穹铁道 安装程序$","^Qt5QWindowIcon$"),("^原神 安装程序$","^Qt5QWindowIcon$")),"white_list":(("^.*$","^OrpheusBrowserHost$"),(".*","^CabinetWClass$"),(".*","^screenClass$"),(".*","^PPTFrameClass$"),(".*","^OpusApp$"),(".*","^XLMAIN$"),(".*","^PP12FrameClass$"),("^WPS.*$","^Qt5QWindowIcon$"),(".*","^GSP5MainWin$")),"key_words":("原神","","genshin","星穹铁道","phigros","游戏","英雄联盟","王者荣耀","伪人","传说之下","undertale","羽毛球","明日方舟","曼德拉记录","崩坏3","碧蓝档案","蔚蓝档案","崩坏三","崩3","bluearchive","我的世界","minecraft","绝区零","米哈游","重返未来","赛马娘","闪耀优俊少女","泰坦陨落","瓦洛兰特","植物大战僵尸","火绒","360官网","卡巴斯基","杀毒","瑞星","金山毒霸","2345安全","360安全","第五人格","幻塔","pvz"),"broken_sites":(),"backup_types":(".doc",".docx",".ppt",".pptx",".pdf",".xls",".xlsx",".mp4",".mp3",".wav",".gsp",".png",".jpg",".jpeg",".mov",".ogg",".m4a"),"hard_drive_syms":("C","D"),"backup_docs_dir":"D:/backup_docs","enable_features":{"restartlightframe":False,"webblock":False,"screenshotsmove":False,"listenwindows":True,"autoshutdown":False,"autoupdate":False,"backup_docs":True}}
         # 读取配置文件或备份
         if exists("D:/tools/DEBUG"):
             config = CONFIG_DEBUG
@@ -799,6 +826,27 @@ if __name__=="__main__":
             lang = language.jp
         else:
             lang = language.en
+        
+        # autoshutdown子进程有特殊性，提前启动
+        if config['enable_features']['autoshutdown']:
+            ash = multiprocessing.Process(target=automatic_functions,args=(config['allowed_time_start'],config['allowed_time_end'],lang))
+            ash.start()
+            
+        # 等待时间同步
+        get_time_fails = 0
+        while True:
+            it = get_beijin_time()
+            if it:
+                internet_time = it.timestamp()
+                local_time = datetime.now().timestamp()
+                if abs(internet_time-local_time) < 10:
+                    break
+            else:
+                get_time_fails += 1
+                if get_time_fails >= 5:
+                    log("["+lang["parent_process"]+"]"+lang["cannot_get_time"])
+                    break
+            sleep(5)
         # 启动子进程
         log("["+lang["parent_process"]+"]"+lang["parent_begin"].format(version=VERSION)+str(config))
         # rslr=restartlightframe;lw=listenwindows;wb=webblock;ssm=screenshotsmove;ash=autoshutdown;au=autoupdate
@@ -811,9 +859,6 @@ if __name__=="__main__":
         if config['enable_features']['webblock']:
             wb = multiprocessing.Process(target=webblock,args=(tuple(config['brokenexes']),tuple(config['brokenapps']),tuple(config["white_list"]),config["is_notice"],config["strict_match"],tuple(config["broken_sites"]),tuple(config["key_words"]),lang))
             wb.start()
-        if config['enable_features']['autoshutdown']:
-            ash = multiprocessing.Process(target=automatic_functions,args=(config['allowed_time_start'],config['allowed_time_end'],lang))
-            ash.start()
         if config['enable_features']['autoupdate']:
             ash = multiprocessing.Process(target=auto_update,args=(VERSION,config["is_notice"],lang))
             ash.start()

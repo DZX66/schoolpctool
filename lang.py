@@ -70,6 +70,7 @@ zh_cn={
     "second":"秒",
     "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
     "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
+    "cannot_get_time":"访问时间服务器失败5次，放弃检查时间同步。",
 }
 en={
     "lang":"en",
@@ -142,6 +143,7 @@ en={
     "second":" second(s) ",
     "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
     "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
+    "cannot_get_time":"访问时间服务器失败5次，放弃检查时间同步。",
 }
 jp = {
 "lang": "jp",
@@ -214,4 +216,5 @@ jp = {
 "second":"秒",
     "recent_dir_not_found":"最近使用的项目文件夹{path}不存在！",
     "file_backuped":"文档已备份，从{org}复制到{target_dir}。",
+    "cannot_get_time":"访问时间服务器失败5次，放弃检查时间同步。",
 } 

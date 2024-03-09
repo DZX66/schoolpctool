@@ -21,7 +21,7 @@ if __name__=="__main__":
     if is_admin():
         try:
             #检查版本适配
-            VERSION="beta0.32"
+            VERSION="beta0.33"
             if exists("D:/tools/VERSION"):
                 with open("D:/tools/VERSION","r",encoding="utf-8") as f:
                     spt_version=f.read()
@@ -30,7 +30,7 @@ if __name__=="__main__":
             system("title schoolpctool控制台"+VERSION)
             while True:
                 cmd=""
-                while cmd not in ("1","2","3","4","5","6"):
+                while cmd not in ("1","2","3","4","5","6","7"):
                     system("cls")
                     print("这是schoolpctool的控制台")
                     if VERSION!=spt_version:
@@ -48,6 +48,7 @@ if __name__=="__main__":
                     print("4.打开帮助页")
                     print("5.重启schoolpctool")
                     print("6.关闭schoolpctool")
+                    print("7.获取当前运行的窗口（需开启listenwindows）")
                     print("="*10)
                     cmd=input("请选择服务：")
                 if cmd=="1":
@@ -127,6 +128,17 @@ if __name__=="__main__":
                         print("密码错误")
                         password=pwinput.pwinput("输入密码：")
                     subprocess.Popen("taskkill /F /IM schoolpctool.exe", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=0x08000000) #强制结束
+                    system("pause")
+                elif cmd=="7":
+                    f = open("D:/tools/GETWINDOWS","w")
+                    f.close()
+                    while not exists("D:/tools/WINDOWS"):
+                        sleep(0.5)
+                    with open("D:/tools/WINDOWS","r",encoding="utf-8") as f:
+                        content = f.readlines()
+                    remove("D:/tools/WINDOWS")
+                    for i in content:
+                        print(i[:-1])
                     system("pause")
         except Exception as e:
             traceback.print_exc()
