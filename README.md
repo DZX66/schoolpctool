@@ -9,4 +9,4 @@
 此脚本公开部分仅是源代码的一部分，其他部分由于各种原因不予公开
 
 [概念PV](https://www.bilibili.com/video/BV1He411k7df)
-[自动更新访问服务器地址](https://github.com/DZX66/DZX66.github.io/blob/main/schoolpctoolversion.txt)
+[自动更新访问服务器地址](https://gitee.com/dzx_3_0/schoolpctool/blob/master/latest_version.txt)
